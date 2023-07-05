@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: foobar-ingress  # Name of the ingress
+spec:
+  rules:
+    - host: bar.localhost  # Host for the ingress rule
+      http:
+        paths:
+          - pathType: Prefix  # Type of path matching
+            path: /  # Path to match
+            backend:
+              service:
+                name: http-echo-bar-service  # Name of the service to forward traffic to
+                port:
+                  number: 5678  # Port number of the service
+    - host: foo.localhost  # Host for the ingress rule
+      http:
+        paths:
+          - pathType: Prefix  # Type of path matching
+            path: /  # Path to match
+            backend:
+              service:
+                name: http-echo-foo-service  # Name of the service to forward traffic to
+                port:
+                  number: 5678  # Port number of the service

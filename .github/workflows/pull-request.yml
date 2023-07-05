@@ -1,0 +1,60 @@
+name: Deploy to Kind Cluster
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - uses: engineerd/setup-kind@v0.5.0
+        with:
+          version: "v0.11.1"
+
+      - name: Create Kind cluster
+        run: |
+          kind create cluster --name foobar-cluster --config create-cluster/kind-config.yaml
+          export KUBECONFIG="$(kind get kubeconfig-path)"
+          kubectl cluster-info
+          kubectl get pods -n kube-system
+          
+      - name: Deploy ingress to Kind cluster
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml # Deploy the ingress files to the Kind cluster using the exported KUBECONFIG
+
+      - name: Wait for ingress to be ready 
+        run: kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=180s # Wait for the ingress to be ready in the Kind cluster
+
+      - name: Deploy services to Kind cluster
+        run: |
+          kubectl get po -n kube-system 
+          kubectl get po -n ingress-nginx
+          kubectl apply -f deploy-services/
+          sleep 20s
+          kubectl get po
+           
+      - name: Test foo Response
+        run: |
+          response=$(curl -s http://foo.localhost/)
+          if [[ $response == *"foo"* ]]; then
+            echo "curl request succeeded with expected response: foo"
+          else
+            echo "curl request failed. Unexpected response received: $response"
+            exit 1
+          fi
+
+      - name: Test bar Response
+        run: |
+          response=$(curl -s http://bar.localhost/)
+          if [[ $response == *"bar"* ]]; then
+            echo "curl request succeeded with expected response: bar"
+          else
+            echo "curl request failed. Unexpected response received: $response"
+            exit 1
+          fi

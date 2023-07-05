@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: http-echo-foo  # Name of the deployment
+spec:
+  replicas: 1  # Number of desired replicas for the deployment
+  selector:
+    matchLabels:
+      app: http-echo-foo  # Selects the pods with the label "app=http-echo-foo"
+  template:
+    metadata:
+      labels:
+        app: http-echo-foo  # Labels the pods with the label "app=http-echo-foo"
+    spec:
+      containers:
+        - name: http-echo  # Name of the container within the pod
+          image: hashicorp/http-echo  # Docker image to be used for the container
+          args:
+            - "-text=foo"  # Arguments to be passed to the container's command
+          ports:
+            - containerPort: 5678  # Port on which the container will listen for incoming traffic
+          resources:
+            limits:
+              cpu: "500m"  # Maximum CPU limit for the container
+              memory: "256Mi"  # Maximum memory limit for the container
+            requests:
+              cpu: "200m"  # Minimum CPU request for the container
+              memory: "128Mi"  # Minimum memory request for the container
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: http-echo-foo-service  # Name of the service
+spec:
+  selector:
+    app: http-echo-foo  # Selects the pods with the label "app=http-echo-foo"
+  ports:
+    - protocol: TCP  # Specifies the protocol used for the service
+      port: 80  # The port on which the service will be exposed externally
+      targetPort: 5678  # The port on the pods that the traffic will be forwarded to
+
