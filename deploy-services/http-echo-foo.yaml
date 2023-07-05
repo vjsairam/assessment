@@ -40,4 +40,3 @@ spec:
     - protocol: TCP  # Specifies the protocol used for the service
       port: 80  # The port on which the service will be exposed externally
       targetPort: 5678  # The port on the pods that the traffic will be forwarded to
-
