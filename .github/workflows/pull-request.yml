@@ -106,3 +106,5 @@ jobs:
             The load testing results for the bar service is as follows:
             
             "${{ env.bar_load_test_report }} "
+            
+            
