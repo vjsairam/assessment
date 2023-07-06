@@ -4,11 +4,13 @@ on:
   pull_request:
     branches:
       - main
+  push:
+    branches:
+      - feature/*
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -58,3 +60,49 @@ jobs:
             echo "curl request failed. Unexpected response received: $response"
             exit 1
           fi
+              
+      - name: Run Load Test for foo & bar 
+        if: ${{ startsWith(github.ref, 'refs/heads/feature/') }}
+        run: |
+          sudo apt-get install apache2-utils
+          
+          ab_output=$(ab -n 100 -c 10 http://foo.localhost/ 2>&1)
+          average_duration=$(echo "$ab_output" | awk '/Time per request/ {print $4}' | awk -F' ' '{print $1; exit}')
+          p90_duration=$(echo "$ab_output" | awk '/90% / {print $2; exit}')
+          failed_requests=$(echo "$ab_output" | awk '/Failed requests/ {print $3; exit}')
+          req_per_sec=$(echo "$ab_output" | awk '/Requests per second/ {print $4; exit}')
+          metrics="Average Duration: $average_duration ms, 90th Percentile Duration: $p90_duration ms, Percentage of Failed Requests: $failed_requests%, Requests Per Second: $req_per_sec"
+          echo "foo_load_test_report=${metrics}" >> "$GITHUB_ENV"
+          echo "${{ env.foo_load_test_report }}"
+
+          ab_output=$(ab -n 100 -c 10 http://bar.localhost/ 2>&1)
+          average_duration=$(echo "$ab_output" | awk '/Time per request/ {print $4}' | awk -F' ' '{print $1; exit}')
+          p90_duration=$(echo "$ab_output" | awk '/90% / {print $2; exit}')
+          failed_requests=$(echo "$ab_output" | awk '/Failed requests/ {print $3; exit}')
+          req_per_sec=$(echo "$ab_output" | awk '/Requests per second/ {print $4; exit}')
+          metrics="Average Duration: $average_duration ms, 90th Percentile Duration: $p90_duration ms, Percentage of Failed Requests: $failed_requests%, Requests Per Second: $req_per_sec"
+          echo "bar_load_test_report=${metrics}" >> "$GITHUB_ENV"
+          echo "${{ env.bar_load_test_report }}"
+          
+      - name: Check out repository code
+        if: ${{ startsWith(github.ref, 'refs/heads/feature/') }}
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - uses: repo-sync/pull-request@v2
+        if: ${{ startsWith(github.ref, 'refs/heads/feature/') }}
+        name: Create Pull Request
+        with:
+          destination_branch: ${{ github.event.repository.default_branch }}
+          github_token: ${{ secrets.GH_TOKEN }}
+          pr_title: "feat: Load Test Results & Merge ${{ github.ref_name }} into ${{ github.event.repository.default_branch }}"
+          pr_body: |
+            The load testing results for the foo service is as follows:
+            
+            "${{ env.foo_load_test_report }} "
+            
+            The load testing results for the bar service is as follows:
+            
+            "${{ env.bar_load_test_report }} "
