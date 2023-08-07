@@ -11,42 +11,39 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Markdown
+      - uses: engineerd/setup-kind@v0.5.0
+        with:
+          version: "v0.11.1"
+
+      - name: Create Kind cluster
         run: |
-          echo "This is the lead in sentence for the list" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY # this is a blank line
-          echo "- Lets add a bullet point" >> $GITHUB_STEP_SUMMARY
-          echo "- Lets add a second bullet point" >> $GITHUB_STEP_SUMMARY
-          echo "- How about a third one?" >> $GITHUB_STEP_SUMMARY
-
-      # - uses: engineerd/setup-kind@v0.5.0
-      #   with:
-      #     version: "v0.11.1"
-
-      # - name: Create Kind cluster
-      #   run: |
-      #     kind create cluster --name foobar-cluster --config create-cluster/kind-config.yaml
-      #     export KUBECONFIG="$(kind get kubeconfig-path)"
-      #     kubectl cluster-info
-      #     kubectl get pods -n kube-system
+          kind create cluster --name foobar-cluster --config create-cluster/kind-config.yaml
+          export KUBECONFIG="$(kind get kubeconfig-path)"
+          kubectl cluster-info
+          kubectl get pods -n kube-system
           
-      # - name: Deploy ingress to Kind cluster
-      #   run: |
-      #     kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml # Deploy the ingress files to the Kind cluster using the exported KUBECONFIG
+      - name: Deploy ingress to Kind cluster
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml # Deploy the ingress files to the Kind cluster using the exported KUBECONFIG
 
-      # - name: Wait for ingress to be ready 
-      #   run: kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=180s # Wait for the ingress to be ready in the Kind cluster
+      - name: Wait for ingress to be ready 
+        run: kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=180s # Wait for the ingress to be ready in the Kind cluster
 
-      # - name: Deploy services to Kind cluster
-      #   run: |
-      #     kubectl get po -n kube-system 
-      #     kubectl get po -n ingress-nginx
-      #     kubectl apply -f deploy-services/
-      #     sleep 20s
-      #     kubectl get po
-           
+      - name: Deploy services to Kind cluster
+        run: |
+          kubectl get po -n kube-system 
+          kubectl get po -n ingress-nginx
+          kubectl apply -f deploy-services/
+          sleep 20s
+          kubectl get po
+          
+          echo "Docker Container ID" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY # this is a blank line
+          podID=$(kubectl get pods -o custom-columns=PodUID:.metadata.uid 2>&1)
+          echo "${podID}" >> "$GITHUB_STEP_SUMMARY"
+          
       # - name: Test foo Response
       #   run: |
       #     response=$(curl -s http://foo.localhost/)
