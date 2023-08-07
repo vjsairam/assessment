@@ -39,9 +39,8 @@ jobs:
           sleep 20s
           kubectl get po
           
-          echo "Docker Container ID" >> $GITHUB_STEP_SUMMARY
+          podID=$(kubectl get pods -o custom-columns=Docker Container ID:.metadata.uid 2>&1)
           echo "" >> $GITHUB_STEP_SUMMARY # this is a blank line
-          podID=$(kubectl get pods -o custom-columns=PodUID:.metadata.uid 2>&1)
           echo "${podID}" >> "$GITHUB_STEP_SUMMARY"
           
       # - name: Test foo Response
